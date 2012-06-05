@@ -1,0 +1,89 @@
+All modifications in this file were added by Shaun McCarty ( teslapirate@sentrygun.com )
+
+CURRENT TASK:
+----------
+Help pages!
+
+--------------------------------------------------------------------------------
+TASKS TO DO (if not already in new version):
+----------
+-Restart server if it crashes!!!!
+-Method of editing update URLs for various mods/jarfiles
+-Make web server non-browsable (default indexes & redirects)
+-live server console session (rcon)
+-Make following changes to restart:
+	-Add method of archiving server.log upon restart
+-Version numbers of plugin managers
+-Server monitor for individual servers w/ email notification & autorestart
+	*Include java crash data in email
+	(Code python daemon to poll server PID every x seconds, email thru 
+	command prompt, send start command thru mineos_console on crash, then
+	self-terminate?)
+-Group-based permission system
+	Use linux group membership to determine which parts of the page to 
+	render
+
+--------------------------------------------------------------------------------
+FEATURE REQUESTS TO CONSIDER
+----------
+
+Log java errors from startup
+	*Already kinda' done, if java crashes look for hs_err_pid#.log in server 
+	directory
+Bukkit plugin management
+Clean console output in console tab (remove chat/etc.?)
+	grep piping? Research!
+
+
+--------------------------------------------------------------------------------
+Changelist:
+mineos.py
+	Added date info to mineos logging
+	Modified text for InvalidServerNameError
+	Changed test criteria for server name checking
+	Added server_getpid function
+	Added server_info_ps function
+	Added statistics collection via external script
+	Added new config section [custom]
+	Added new config var [stats_delay] under [custom]
+	changed config_section_add from static "onreboot" to section
+	Added fixconfig function to add new vars to server.config on update
+	Added new config var [list_mgmt] under [custom]
+	Added restart function for delays before restarts (adapatable to stop requests)
+	Added macro functions: savemacros, executemacros
+	Fixed bug in status() that could report false positives after server crash
+	Tweaked bukkit cleanup in list_players
+server.py
+	Moved sumdirs() out of display_overview for use elsewhere
+	Redesigned stats page, moved majority of data to individual server pages
+	Added HDD/RAM use and uptime to individual server pages
+	Changed spacing for new status page
+	Modified display_createnew() to add support for stat logging vars
+	Modified start//stop to send user to stats page once completed
+	Added restart option
+	Moved read-check from initial to overview
+	Added machine uptime to overview page
+	Changed updatemos action to include server.config updating for new vars
+	Moved stop/kill all servers from overview to status page
+	Added list management functions
+		*functions: display_lists, list_edit, sync_lists
+		Made users added to banlist automatically dropped from whitelist
+		Made it automatically send apropriate commands to all marked servers
+	Added delayed restart options to individual server stat pages
+	Added refresh option to stats page
+	Added Macro system to allow 10 custom command sets per server
+		*functions: display_macros
+	Added player list to status page w/kick, ban, op buttons
+	Added mineos.log dump to Console section
+statlog.py
+	Allows statistics logging over time
+	*Processor, RAM, Swap use
+	Added cheap connection counting through network checking
+	Changed CPU counting from ps to top for accurate results
+	Added CPU wait time for I/O diagnosing
+mineos_console.py
+	Added crontab for restarting server
+index.html
+	Added links for macros and list management
+crontabs
+	Added entries for restart option
