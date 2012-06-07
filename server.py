@@ -54,38 +54,34 @@ def display_about():
     '''
 
 def display_setup():
-    print '''
-    <script type="text/javascript">
-        $('#savesetup').click(function(event){
-            event.preventDefault();
-            $.post("cgi-bin/server.py", { command: "act",
-                                      action: "savesetup",
-                                      server: 'none',
-                                      arg01: $('#type').val(),
-                                      arg02: $('#server').val(),
-                                      arg03: $('#port').val(),
-                                      arg04: $('#login').val(),
-                                      arg05: $('#pw').val(),
-                                      arg06: $('#sendto').val() },
-            function(data){ $('#main').html(data); });
-    });
-    </script>'''
 
+    print '''
+        <script type="text/javascript">
+        $('#savebutton').one("click", (function(event){
+            event.preventDefault();
+            $.post("cgi-bin/server.py", $('#setupform').serialize(),
+            function(data){ $('#main').html(data); });
+        }));
+        </script>
+    '''
     print '<table><tr>'
     print '<td><h2>mineOS Setup</h2></td>'
     print '</tr></table>'
     print '''
-        <form id="setup" name="setup">
+        <form id="setupform" name="setupform">
+        <input name="command" type="hidden" value="act">
+        <input name="action" type="hidden" value="savesetup">
+        <input name="server" type="hidden" value="none">
         <table><tr>
             <td><h4>Email configuration</h4></td>
         </tr><tr>
             <td colspan="1"><label for="mode">Mode</label></td>
             <td colspan="2">
-                <select id="switch" name="type">
+                <select id="switch" name="em_type">
     '''
 #Can add additional mail server types if necessary.
     for item in ['ssl','normal']:    
-        if mineos.mc().mineos_config['email']['server'] == item:
+        if mineos.mc().mineos_config['email']['em_type'] == item:
             print '<option SELECTED>%s</option>' % item
         else:
             print '<option>%s</option>' % item
@@ -94,28 +90,54 @@ def display_setup():
             </td>
     </tr><tr>
             <td colspan="1"><label for="server">E-mail server</label></td>
-            <td colspan="2"><input type="text" size="60" name="server" id="server" value="%s" /></td>
+            <td colspan="2"><input type="text" size="60" name="em_server" id="em_server" value="%s" /></td>
         </tr><tr>
             <td colspan="1"><label for="port">Port #</label></td>
-            <td colspan="2"><input type="text" size="60" name="port" id="port" value="%s" /></td>
+            <td colspan="2"><input type="text" size="60" name="em_port" id="em_port" value="%s" /></td>
         </tr><tr>
             <td colspan="1"><label for="login">Login</label></td>
-            <td colspan="2"><input type="text" size="60" name="login" id="login" value="%s" /></td>
+            <td colspan="2"><input type="text" size="60" name="em_login" id="em_login" value="%s" /></td>
         </tr><tr>
             <td colspan="1"><label for="pw">Password</label></td>
-            <td colspan="2"><input type="password" size="60" name="pw" id="pw" value="********" /></td>
+            <td colspan="2"><input type="password" size="60" name="em_pw" id="em_pw" value="********" /></td>
+        </tr><tr>
+            <td colspan="1"><label for="sendto">Sender*</label></td>
+            <td colspan="2"><input type="text" size="60" name="em_sendfrom" id="em_sendfrom" value="%s" /></td>
         </tr><tr>
             <td colspan="1"><label for="sendto">Recipient(s)*</label></td>
-            <td colspan="2"><input type="text" size="60" name="sendto" id="sendto" value="%s" /></td>
+            <td colspan="2"><input type="text" size="60" name="em_sendto" id="em_sendto" value="%s" /></td>
         </tr>
         </table>
         *Separate recipients with a comma.<br>
-        <a href="#" id="savesetup" class="actionbutton">Save config</a>
+        *Do not change the password field unless you are typing a new password.<br>
+        <a href="#" id="savebutton" class="savebutton actionbutton">Save config</a>
 
-        ''' % (mineos.mc().mineos_config['email']['server'], 
-                    mineos.mc().mineos_config['email']['port'],
-                    mineos.mc().mineos_config['email']['login'],
-                    mineos.mc().mineos_config['email']['sendto'])
+        ''' % (mineos.mc().mineos_config['email']['em_server'], 
+                    mineos.mc().mineos_config['email']['em_port'],
+                    mineos.mc().mineos_config['email']['em_login'],
+                    mineos.mc().mineos_config['email']['em_sendfrom'],
+                    mineos.mc().mineos_config['email']['em_sendto'])
+
+def savesetup(form):
+    filename = os.path.join(mineos.mc().mc_path, 'mineos.config')
+    for key in form.keys():
+        if key in ['em_server', 'em_port', 'em_login', 'em_sendfrom', 'em_sendto', 'em_type']:
+            if form[key] == '':
+                mineos.mc.config_alter(filename, 'email', key, 'none')
+            else:
+                mineos.mc.config_alter(filename, 'email', key, form[key])
+        elif key in ['em_pw']:
+#Only update PW if a new one is typed in.
+            if form[key] != '********':
+                import base64
+                encoded = base64.b64encode(form[key])
+                mineos.mc.config_alter(filename, 'email', key, encoded)
+ 
+#Remove for releases! only for debugging.
+    print '<pre>'
+    for key, value in mineos.mc.attribute_list(filename):
+        print '{:<15}'.format(key), '{:<15}'.format(value)
+    print '</pre>'
     
 def display_macros(server_name):
     def load_macros(instance):
@@ -1639,12 +1661,13 @@ def act_fix_server_config():
     except:
         confpath = os.path.join(mineos.mc().mineos_config['paths']['mc_path'], 'mineos.config')
         mineos.mc.config_section_add(confpath, 'email')
-        mineos.mc.config_add(confpath,'email','server','none')
-        mineos.mc.config_add(confpath,'email','type','none')
-        mineos.mc.config_add(confpath,'email','port','none')
-        mineos.mc.config_add(confpath,'email','login','none')
-        mineos.mc.config_add(confpath,'email','pass','none')
-        mineos.mc.config_add(confpath,'email','sendto','none')
+        mineos.mc.config_add(confpath,'email','em_server','none')
+        mineos.mc.config_add(confpath,'email','em_type','none')
+        mineos.mc.config_add(confpath,'email','em_port','none')
+        mineos.mc.config_add(confpath,'email','em_login','none')
+        mineos.mc.config_add(confpath,'email','em_pw','none')
+        mineos.mc.config_add(confpath,'email','em_sendfrom','none')
+        mineos.mc.config_add(confpath,'email','em_sendto','none')
         print 'mineos.config updated.\n'
         
         
@@ -1790,7 +1813,7 @@ try:
             user_actions(form['action'], form['server'], form['argument'])
             display_stats(form['server'])
         elif form['action'] == 'savesetup':
-            pass
+            savesetup(form)
             
 except KeyError as x:
     print 'invalid number of arguments'

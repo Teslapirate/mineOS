@@ -14,21 +14,20 @@ import os
 import argparse
 import mineos
 import time
+import smtplib
+import base64
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(prog='statlog')
-    parser.add_argument('a_pid', metavar='Process ID')
+    parser = argparse.ArgumentParser(prog='monitor')
     parser.add_argument('a_servername', metavar='Server name')
-    parser.add_argument('a_email', metavar='E-mail address')
 
     args = parser.parse_args()
 
-    pid = args.a_pid
     server_name = args.a_servername
-    email = args.a_email
 
     server = mineos.mc(server_name)
+    pid = server.server_getpid()
     message = 'Your mineOS server ' + server_name + ' has gone offline due to '
     print 'Server monitor active'
     while server.status() == 'up': #keeps daemon up as long as server's running.
@@ -56,13 +55,30 @@ if __name__ == "__main__":
         
     #send email notification
     #needs vars: Email, SSL, server, port, login, pw
-    sendmail_location = "/usr/sbin/sendmail" # sendmail location
-    p = os.popen("%s -t" % "/usr/sbin/sendmail", "w")
-    p.write("From: %s\n" % "servermonitor@sentrygun.com")
-    p.write("To: %s\n" % email)
-    p.write("Subject: %s\n" % (server_name + "has gone offline"))
-    p.write("\n") # blank line separating headers from body
-    p.write(message)
-    status = p.close()
-    if status != 0:
-           print "Sendmail exit status", status
+    from email.MIMEMultipart import MIMEMultipart
+    from email.MIMEText import MIMEText
+    sender = mineos.mc().mineos_config['email']['em_sendfrom']
+    receivers = ','.join(mineos.mc().mineos_config['email']['em_sendto'].split(','))
+
+    msg = MIMEMultipart()
+    msg["Subject"] = "mineOS Server Monitor Notification"
+    msg["From"] = 'mineOS Server Monitor <' + sender + '>'
+    msg["To"] = receivers
+    body = MIMEText(message)
+    msg.attach(body)
+
+    mailserver = mineos.mc().mineos_config['email']['em_server']
+    mailport = mineos.mc().mineos_config['email']['em_port']
+    try:
+        if mineos.mc().mineos_config['email']['em_type'] == 'normal':
+            smtpObj = smtplib.SMTP(mailserver, mailport)
+        elif mineos.mc().mineos_config['email']['em_type'] == 'ssl':
+            smtpObj = smtplib.SMTP_SSL(mailserver, mailport)
+        if mineos.mc().mineos_config['email']['em_login'] != "none":
+            smtpObj.login(mineos.mc().mineos_config['email']['em_login'], base64.b64decode(mineos.mc().mineos_config['email']['em_pw']))
+        smtpObj.sendmail(sender, receivers, msg.as_string() )
+        smtpObj.quit()
+        print "Successfully sent email"
+    except Exception as x:
+        print "Error: unable to send email - "
+        print x
