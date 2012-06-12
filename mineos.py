@@ -129,7 +129,7 @@ class mc:
                 (pname,perr) = getpname.communicate()
                 pname = pname.split(' ')
                 if pname[2].replace('mc-','',1) == self.server_name:
-                    logging.debug('(%s) PID found: %s', self.server_name, sout[p])
+#                    logging.debug('(%s) PID found: %s', self.server_name, sout[p])
                     return sout[p]
             logging.debug('(%s) PID request: no PID for this server', self.server_name)
             return 0
@@ -146,6 +146,7 @@ class mc:
             elif type == 'uptime':
                 info_process = subprocess.Popen(['ps','-p',pid,'-o','etime='],stdout=subprocess.PIPE)
             (sout,serr) = info_process.communicate()
+        logging.info('(%s) Info: %s %s', self.server_name, type, sout)
         return sout
 
 #To be run upon completion of mineOS updating.
@@ -191,26 +192,18 @@ class mc:
 
 
 #Stats collection, Requires server & server pid as arguments. Uses external logging script.
-    def stat_collector(self, pid):
-        try:
-            port = int(self.server_config['minecraft']['port'])
-            delay = (int(self.server_config['custom']['stats_delay']) * 60)
-        except:
-            delay = 0
-        if delay <60:
-            logging.warning('(%s) Stat logging delay is less than 60 seconds, disabling', self.server_name)
-        if pid > 0 and self.status() == 'up' and delay > 59:
-            execute_command = "screen -dmS log-%s %s %s %s %s %s" % \
+    def stat_collector(self):
+        if self.server_getpid() > 0 and self.status() == 'up':
+            sl_path = os.path.join(self.mineos_config['paths']['mc_path'], 'monitor.py')
+            execute_command = "screen -dmS log-%s %s %s %s" % \
                               (self.server_name, 
                                '/usr/bin/python',
-                               '/usr/games/minecraft/statlog.py',
-                               pid,
-                               delay,
-                               port)
-            logging.debug('(%s) Log begin: %s', self.server_name, execute_command)
+                               sl_path,
+                               self.server_name)
             os.system(execute_command)
+            logging.debug('(%s) Server monitor/logging loaded: %s', self.server_name, execute_command)
         else:
-            logging.warning('(%s) Logging failed to start! pid: %s status: %s delay: %s', self.server_name, pid, self.status(), delay)
+            logging.warning('(%s) Server monitor/log failed to start.')
 
     def restart(self, delaystr):
         delay = int(delaystr)
@@ -267,8 +260,9 @@ class mc:
         if self.sanity['cwd']:
 #Added PID checking since the old method will give false positives for crashed servers.
             if self.sanity['server_log_lck'] and self.sanity['session_lock']:
+
                 if self.server_getpid() > 0:
-                    logging.info('(%s) (Status check) PID found.', self.server_name)
+                    logging.info('(%s) (Status check) PID found (%s)', self.server_name, self.server_getpid())
                     return 'up'
                 else:
                     logging.info('(%s) (Status check) lock files found, no PID found.', self.server_name)
@@ -677,13 +671,13 @@ class mc:
                 for z in xrange(15):
                     time.sleep(2)
                     if self.status() == 'up':
+                        logging.info('[%s] Initializing server monitor...', self.server_name)
+                        self.stat_collector()
                         break
                 status = self.status()
                 logging.info('(%s) status: %s', self.server_name, status)
-#start stat logging if enabled
-                if self.server_config['custom']['stats_delay'] != '0':
-                    logging.info('[%s] Initializing logging...', self.server_name)
-                    self.stat_collector(self.server_getpid())
+
+                
             else:
                 logging.error('(%s) server already running on port: %s', self.server_name, int(self.server_config['minecraft']['port']))
                 raise PortInUseException(self.server_name, port)

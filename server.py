@@ -577,8 +577,6 @@ def display_status():
         'foreign': '<span class="purple">%s</span>' % '{:<11}'.format('foreign'),
         }
 
-    config = mineos.mc().mineos_config
-    
     for server, port, status in mineos.mc.ports_reserved():
         print '<a href="#" class="stats" id="%s">%s</a>%s' % (server,
                                                                 '{:<20}'.format(server),
@@ -786,7 +784,7 @@ def display_stats(server_name):
                     selects.append('<option value="macro" title="macro%s" id="act">%s</option>' % (x, name))
         elif status in ['down', 'foreign', 'unclean']:
             selects.append('<option value="rename" title="none" id="display">Rename server</option>')
-            selects.append('<option value="archive_log" title="none" id="act">Archive & clear server.log</option>')
+            selects.append('<option value="archive_logs" title="none" id="act">Archive & clear server.log</option>')
         return ' '.join(selects)
     
     print '''
@@ -837,10 +835,8 @@ def display_stats(server_name):
         function(data){ $('#main').html(data); });
     });
     </script>'''
-
     server = mineos.mc(server_name)
     status = server.status()
-    config = mineos.mc().mineos_config
     port = server.server_config['minecraft']['port']
     
     colors = {
@@ -867,7 +863,7 @@ def display_stats(server_name):
                                       '{:<16}'.format('connections'),
                                       '{:<8}'.format('uptime'))
                                       
-    paths = config['paths']['world_path'] + '/' + server_name
+    paths = mineos.mc().mineos_config['paths']['world_path'] + '/' + server_name
     try:
         size = int(sumdirs(paths))
         if (size / 1000000000) > 1:
@@ -1038,8 +1034,8 @@ def display_overview():
     import mineos_console
     print '{:<18}'.format('mineos_console.py'), mineos_console.__version__
     print '{:<18}'.format('mineos.py'), mineos.__version__
-    import statlog
-    print '{:<18}'.format('statlog.py'), statlog.__version__
+    import monitor
+    print '{:<18}'.format('monitor.py'), monitor.__version__
 
     print
     print '<b>MineOS Disk Usage</b>:'

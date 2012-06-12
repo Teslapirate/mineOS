@@ -7,18 +7,12 @@ Help pages!
 --------------------------------------------------------------------------------
 TASKS TO DO (if not already in new version):
 ----------
--Restart server if it crashes!!!!
 -Method of editing update URLs for various mods/jarfiles
 -Make web server non-browsable (default indexes & redirects)
 -live server console session (rcon)
 -Make following changes to restart:
 	-Add method of archiving server.log upon restart
 -Version numbers of plugin managers
--Server monitor for individual servers w/ email notification & autorestart
-	*Include java crash data in email
-	(Code python daemon to poll server PID every x seconds, email thru 
-	command prompt, send start command thru mineos_console on crash, then
-	self-terminate?)
 -Group-based permission system
 	Use linux group membership to determine which parts of the page to 
 	render
@@ -75,15 +69,26 @@ server.py
 		*functions: display_macros
 	Added player list to status page w/kick, ban, op buttons
 	Added mineos.log dump to Console section
-statlog.py
+	Added mineOS Setup page
+		Added fields for configuring email notifications
+	Fixed typo in status page dropdown menu code making log archiving fail
+	Added entries to update mineos.config for email data
+statlog.py ==> monitor.py
 	Allows statistics logging over time
 	*Processor, RAM, Swap use
 	Added cheap connection counting through network checking
 	Changed CPU counting from ps to top for accurate results
 	Added CPU wait time for I/O diagnosing
+	renamed to monitor.py
+	Changed to server monitor
+		Detects server down vs. server crash
+		Sends email notification on server down/crash
+		Includes crash dump info in email if crash
+		Automatically restarts on crash
 mineos_console.py
 	Added crontab for restarting server
 index.html
 	Added links for macros and list management
+	Added link for mineOS Setup
 crontabs
 	Added entries for restart option
